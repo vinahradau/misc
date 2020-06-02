@@ -1,0 +1,48 @@
+┌ LIMIT
+  limit: ℤ
+|
+  limit ∈ {1000, 2000, 5000}
+└
+
+┌ BALANCE
+  ΞLIMIT
+  balance: ℤ
+|
+  balance + limit ≥ 0
+└
+
+┌ Init
+  BALANCE ′
+|
+  balance′ = 0
+└
+
+┌ SetLimit
+  ΔLIMIT
+  limit?: ℕ
+|
+  limit′ = limit? 
+└
+
+┌ Withdraw
+  ΔBALANCE
+  amount?: ℕ
+|
+  amount? ≤ balance + limit
+  balance′ = balance − amount?
+└
+
+┌ Deposit
+  ΔBALANCE
+  amount?: ℕ
+|
+  balance′ = balance + amount?
+└
+
+┌ WithdrawAvail
+  ΔBALANCE
+  amount!: ℕ
+|
+  amount! = balance + limit
+  balance′ = -limit
+└
