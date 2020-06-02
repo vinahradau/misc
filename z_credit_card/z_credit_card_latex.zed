@@ -1,0 +1,48 @@
+\begin{schema}{LIMIT}
+ limit : \num 
+\where
+ limit \in \{ 1000 , 2000 , 5000 \}
+\end{schema}
+
+\begin{schema}{BALANCE}
+ \Xi LIMIT \\
+ balance : \num 
+\where
+ balance + limit \geq 0
+\end{schema}
+
+\begin{schema}{Init}
+ BALANCE~' 
+\where
+ balance' = 0
+\end{schema}
+
+\begin{schema}{SetLimit}
+ \Delta LIMIT \\
+ limit? : \nat 
+\where
+ limit' = limit?
+\end{schema}
+
+\begin{schema}{Withdraw}
+ \Delta BALANCE \\
+ amount? : \nat 
+\where
+ amount? \leq balance + limit \\
+ balance' = balance - amount?
+\end{schema}
+
+\begin{schema}{Deposit}
+ \Delta BALANCE \\
+ amount? : \nat 
+\where
+ balance' = balance + amount?
+\end{schema}
+
+\begin{schema}{WithdrawAvail}
+ \Delta BALANCE \\
+ amount! : \nat 
+\where
+ amount! = balance + limit \\
+ balance' =~\negate limit
+\end{schema}
