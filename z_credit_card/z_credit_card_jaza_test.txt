@@ -1,0 +1,20 @@
+JAZA> load z_credit_card_latex.zed
+Loading 'z_credit_card_latex.zed' ...
+Added 7 definitions.
+JAZA> do Init
+\lblot balance'==0, limit'==1000, limit''==1000 \rblot
+JAZA> ; SetLimit
+    Input limit? = 1000
+\lblot balance'==0, limit'==1000 \rblot
+JAZA> ; Deposit
+    Input amount? = 10
+\lblot balance'==10, limit'==1000, limit''==1000 \rblot
+JAZA>
+JAZA>
+JAZA>
+JAZA> ; Withdraw
+    Input amount? = 5
+\lblot balance'==5, limit'==1000, limit''==1000 \rblot
+JAZA> ; WithdrawAvail
+\lblot amount!==1005, balance'==-1000, limit'==1000, limit''==1000 \rblot
+JAZA>
