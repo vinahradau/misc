@@ -1,4 +1,8 @@
-// Serve Vinahradau Barber Paradox
+// Barber Paradox model with a solution
+// Developed by Serge Vinahradau
+// To tretrieve all self shaved persons, call selfShaved[] function
+// To retrieve the barber, call the barber[] function
+
 
 sig Person{
 }
