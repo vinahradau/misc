@@ -1,8 +1,12 @@
+// formal model for mandatory access control (MAC)
+// can be verified and visualized using Alloy Tools GUI
+// developed by Serge (vinahradau@yahoo.de)
+
 module MandatoryAccessControl
 
 enum DATA_CONFIDENTIALIY_LEVEL {TOPSECRET, SECRET, CONFIDENTIAL, UNCLASSIFIED}
 
-enum USER_ID {USER_1, USER_2, USER_3, USER_4, USER_5}
+enum USER_ID {USER_1, USER_2, USER_3, USER_4}
 
 enum DOCUMENT_ID {DOCUMENT_1, DOCUMENT_2, DOCUMENT_3, DOCUMENT_4, DOCUMENT_5}
 
@@ -21,7 +25,7 @@ else
 none
 }
 
-pred confidentialityHigherOrEqual(
+pred confidentialityCleared(
 level1: DATA_CONFIDENTIALIY_LEVEL,
 level2: DATA_CONFIDENTIALIY_LEVEL
 )
@@ -35,17 +39,24 @@ documentClassification: DOCUMENT_ID -> lone DATA_CONFIDENTIALIY_LEVEL,
 userClearance: USER_ID -> lone DATA_CONFIDENTIALIY_LEVEL
 }
 
-pred cleared(
+// all users have to have a clearance
+// all documents have to have a classification
+assert{
+all d : DOCUMENT_ID | d in DOMAIN.documentClassification.univ
+all u : USER_ID | u in DOMAIN.userClearance.univ
+}
+
+pred userDocumentAccessCleared(
 user_in: USER_ID,
 document_in: DOCUMENT_ID
 )
 {
-confidentialityHigherOrEqual[DOMAIN.userClearance[user_in], DOMAIN.documentClassification[document_in]]
+confidentialityCleared[DOMAIN.userClearance[user_in], DOMAIN.documentClassification[document_in]]
 }
 
-run runAndVerify
+run runAndVerifyMandatoryAccessDomain
 
-pred runAndVerify() {
+pred runAndVerifyMandatoryAccessDomain() {
 verifyConfidentialityHigherOrEqual
 
 setupUsers
@@ -54,26 +65,26 @@ verifyAccess
 }
 
 pred verifyConfidentialityHigherOrEqual() {
-confidentialityHigherOrEqual[TOPSECRET, TOPSECRET]
-confidentialityHigherOrEqual[TOPSECRET, SECRET]
-confidentialityHigherOrEqual[TOPSECRET, CONFIDENTIAL]
-confidentialityHigherOrEqual[TOPSECRET, UNCLASSIFIED]
+confidentialityCleared[TOPSECRET, TOPSECRET]
+confidentialityCleared[TOPSECRET, SECRET]
+confidentialityCleared[TOPSECRET, CONFIDENTIAL]
+confidentialityCleared[TOPSECRET, UNCLASSIFIED]
 
-confidentialityHigherOrEqual[SECRET, SECRET]
-confidentialityHigherOrEqual[SECRET, CONFIDENTIAL]
-confidentialityHigherOrEqual[SECRET, UNCLASSIFIED]
+confidentialityCleared[SECRET, SECRET]
+confidentialityCleared[SECRET, CONFIDENTIAL]
+confidentialityCleared[SECRET, UNCLASSIFIED]
 
-confidentialityHigherOrEqual[CONFIDENTIAL, CONFIDENTIAL]
-confidentialityHigherOrEqual[CONFIDENTIAL, UNCLASSIFIED]
+confidentialityCleared[CONFIDENTIAL, CONFIDENTIAL]
+confidentialityCleared[CONFIDENTIAL, UNCLASSIFIED]
 
-not confidentialityHigherOrEqual[SECRET, TOPSECRET]
-not confidentialityHigherOrEqual[CONFIDENTIAL, TOPSECRET]
-not confidentialityHigherOrEqual[UNCLASSIFIED, TOPSECRET]
+not confidentialityCleared[SECRET, TOPSECRET]
+not confidentialityCleared[CONFIDENTIAL, TOPSECRET]
+not confidentialityCleared[UNCLASSIFIED, TOPSECRET]
 
-not confidentialityHigherOrEqual[CONFIDENTIAL, SECRET]
-not confidentialityHigherOrEqual[UNCLASSIFIED, SECRET]
+not confidentialityCleared[CONFIDENTIAL, SECRET]
+not confidentialityCleared[UNCLASSIFIED, SECRET]
 
-not confidentialityHigherOrEqual[UNCLASSIFIED, CONFIDENTIAL]
+not confidentialityCleared[UNCLASSIFIED, CONFIDENTIAL]
 }
 
 pred setupUsers() {
@@ -91,23 +102,23 @@ DOMAIN.documentClassification[DOCUMENT_4] = UNCLASSIFIED
 }
 
 pred verifyAccess() {
-cleared[USER_1, DOCUMENT_1]
-cleared[USER_1, DOCUMENT_2]
-cleared[USER_1, DOCUMENT_3]
-cleared[USER_1, DOCUMENT_4]
+userDocumentAccessCleared[USER_1, DOCUMENT_1]
+userDocumentAccessCleared[USER_1, DOCUMENT_2]
+userDocumentAccessCleared[USER_1, DOCUMENT_3]
+userDocumentAccessCleared[USER_1, DOCUMENT_4]
 
-not cleared[USER_2, DOCUMENT_1]
-cleared[USER_2, DOCUMENT_2]
-cleared[USER_2, DOCUMENT_3]
-cleared[USER_2, DOCUMENT_4]
+not userDocumentAccessCleared[USER_2, DOCUMENT_1]
+userDocumentAccessCleared[USER_2, DOCUMENT_2]
+userDocumentAccessCleared[USER_2, DOCUMENT_3]
+userDocumentAccessCleared[USER_2, DOCUMENT_4]
 
-not cleared[USER_3, DOCUMENT_1]
-not cleared[USER_3, DOCUMENT_2]
-cleared[USER_3, DOCUMENT_3]
-cleared[USER_3, DOCUMENT_4]
+not userDocumentAccessCleared[USER_3, DOCUMENT_1]
+not userDocumentAccessCleared[USER_3, DOCUMENT_2]
+userDocumentAccessCleared[USER_3, DOCUMENT_3]
+userDocumentAccessCleared[USER_3, DOCUMENT_4]
 
-not cleared[USER_4, DOCUMENT_1]
-not cleared[USER_4, DOCUMENT_2]
-not cleared[USER_4, DOCUMENT_3]
-cleared[USER_4, DOCUMENT_4]
+not userDocumentAccessCleared[USER_4, DOCUMENT_1]
+not userDocumentAccessCleared[USER_4, DOCUMENT_2]
+not userDocumentAccessCleared[USER_4, DOCUMENT_3]
+userDocumentAccessCleared[USER_4, DOCUMENT_4]
 }
