@@ -1,5 +1,5 @@
 // decentralized
-// Disscretionary Access Control (DAC)
+// Discretionary Access Control (DAC)
 
 module DiscretionaryAccessControl
 
