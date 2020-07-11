@@ -1,5 +1,6 @@
-// decentralized
-// Discretionary Access Control (DAC)
+// formal model for discretionary access control (DAC)
+// can be verified and visualized using Alloy Tools GUI
+// developed by Serge (vinahradau@yahoo.de)
 
 module DiscretionaryAccessControl
 
@@ -30,14 +31,15 @@ files: FILE_ID -> one FILE
 sig PERMISSIONS{
 owner: one USER_ID,
 ownerPermissions: set PERMISSION,
-group: one GROUP_ID,
+group: lone GROUP_ID,
 groupPermissions: set PERMISSION,
 otherPermissions: set PERMISSION
 }
 
 sig DIRECTORY extends RESOURCE {
 directoryId: one DIRECTORY_ID,
-directories: set DIRECTORY,
+parentDirectory: one DIRECTORY,
+subDirectories: set DIRECTORY,
 files: set FILE_ID
 }{
 }
@@ -48,23 +50,49 @@ contents: set CONTENT
 }{
 }
 
+pred fileAccess(
+user_in: USER_ID,
+file_in: FILE_ID,
+permissions_in: set PERMISSION
+)
+{
+((SYSTEM.files[file_in].permissions).owner = user_in)
+or
+(
+(user_in in SYSTEM.groups[SYSTEM.files[file_in].permissions.group])
+and 
+(all p : permissions_in | p in SYSTEM.files[file_in].permissions.groupPermissions)
+)
+or
+(all p : permissions_in | p in SYSTEM.files[file_in].permissions.otherPermissions)
+}
+
+pred directoryAccess(
+user_in: USER_ID,
+directory_in: DIRECTORY_ID,
+permissions_in: set PERMISSION
+)
+{
+((SYSTEM.directories[directory_in].permissions).owner = user_in)
+or
+(
+(user_in in SYSTEM.groups[SYSTEM.directories[directory_in].permissions.group])
+and 
+(all p : permissions_in | p in SYSTEM.directories[directory_in].permissions.groupPermissions)
+)
+or
+(all p : permissions_in | p in SYSTEM.directories[directory_in].permissions.otherPermissions)
+}
+
 fun readFile
 (
 user_in: USER_ID,
-fileId_in: FILE_ID
+file_in: FILE_ID
 ) : set CONTENT
 {
-(
-((SYSTEM.files[fileId_in].permissions).owner = user_in)
-or
-(user_in in SYSTEM.groups[SYSTEM.files[fileId_in].permissions.group] 
-and 
-READ in SYSTEM.files[fileId_in].permissions.groupPermissions)
-or
-(READ in SYSTEM.files[fileId_in].permissions.otherPermissions)
-)
+fileAccess[user_in, file_in, READ]
 =>
-SYSTEM.files[fileId_in].contents
+SYSTEM.files[file_in].contents
 else none
 }
 
@@ -74,15 +102,7 @@ user_in: USER_ID,
 directory_in: DIRECTORY_ID
 ) : set FILE_ID
 {
-(
-((SYSTEM.directories[directory_in].permissions).owner = user_in)
-or
-(user_in in SYSTEM.groups[SYSTEM.directories[directory_in].permissions.group] 
-and 
-READ in SYSTEM.directories[directory_in].permissions.groupPermissions)
-or
-(READ in SYSTEM.directories[directory_in].permissions.otherPermissions)
-)
+directoryAccess[user_in, directory_in, READ]
 =>
 SYSTEM.directories[directory_in].files
 else none
@@ -91,23 +111,13 @@ else none
 pred writeFile
 (
 user_in: USER_ID,
-fileId_in: FILE_ID,
+file_in: FILE_ID,
 content_in: CONTENT
 )
 {
-((SYSTEM.files[fileId_in].permissions).owner = user_in)
-or
-(
-user_in in SYSTEM.groups[SYSTEM.files[fileId_in].permissions.group] 
-and 
-WRITE in SYSTEM.files[fileId_in].permissions.groupPermissions
-)
-or
-(
-WRITE in SYSTEM.files[fileId_in].permissions.otherPermissions
-)
+fileAccess[user_in, file_in, WRITE]
 =>
-SYSTEM.files[fileId_in].contents = SYSTEM.files[fileId_in].contents + content_in
+SYSTEM.files[file_in].contents = SYSTEM.files[file_in].contents + content_in
 }
 
 pred writeDirectory
@@ -117,17 +127,7 @@ directory_in: DIRECTORY_ID,
 fileId_in: FILE_ID
 )
 {
-(
-((SYSTEM.directories[directory_in].permissions).owner = user_in)
-or
-(
-user_in in SYSTEM.groups[SYSTEM.directories[directory_in].permissions.group] 
-and 
-WRITE in SYSTEM.directories[directory_in].permissions.groupPermissions
-)
-or
-(WRITE in SYSTEM.directories[directory_in].permissions.otherPermissions)
-)
+directoryAccess[user_in, directory_in, WRITE]
 =>
 SYSTEM.directories[directory_in].files = SYSTEM.directories[directory_in].files + fileId_in
 else
@@ -137,75 +137,60 @@ SYSTEM.directories[directory_in].files = SYSTEM.directories[directory_in].files
 pred executeFile
 (
 user_in: USER_ID,
-fileId_in: FILE_ID
+file_in: FILE_ID
 )
 {
-((SYSTEM.files[fileId_in].permissions).owner = user_in)
-or
-(
-user_in in SYSTEM.groups[SYSTEM.files[fileId_in].permissions.group] 
-and 
-EXECUTE in SYSTEM.files[fileId_in].permissions.groupPermissions
-)
-or
-(
-EXECUTE in SYSTEM.files[fileId_in].permissions.otherPermissions
-)
+fileAccess[user_in, file_in, EXECUTE]
 }
 
 fun executeDirectory
 (
 user_in: USER_ID,
-directoryId_in: DIRECTORY_ID
+directory_in: DIRECTORY_ID
 ) : set FILE_ID
 {
-(
-((SYSTEM.directories[directoryId_in].permissions).owner = user_in)
-or
-(
-user_in in SYSTEM.groups[SYSTEM.directories[directoryId_in].permissions.group] 
-and 
-EXECUTE in SYSTEM.directories[directoryId_in].permissions.groupPermissions
-and
-READ in SYSTEM.directories[directoryId_in].permissions.groupPermissions
-)
-or
-(
-EXECUTE in SYSTEM.directories[directoryId_in].permissions.otherPermissions
-and
-READ in SYSTEM.directories[directoryId_in].permissions.otherPermissions
-)
-)
+directoryAccess[user_in, directory_in, EXECUTE + READ]
 =>
-SYSTEM.directories[directoryId_in].files
+SYSTEM.directories[directory_in].files
 else
 none
 }
 
-run runAndVerify
+run runAndVerifyDiscretionaryAccess
 
-pred runAndVerify() {
+pred runAndVerifyDiscretionaryAccess() {
+setupGroups
 setupFiles
+setupDirectories
 verify
 }
 
-pred setupFiles() {
+pred setupGroups() {
 SYSTEM.groups = GROUP_1 -> (USER_1 + USER_2 + USER_3) + GROUP_2 -> (USER_4)
+}
 
+pred setupFiles() {
 SYSTEM.files[FILE_1].permissions.owner = USER_1
 SYSTEM.files[FILE_1].permissions.group = GROUP_1
 SYSTEM.files[FILE_1].permissions.groupPermissions = (READ + WRITE)
 SYSTEM.files[FILE_1].permissions.otherPermissions = (READ)
 SYSTEM.files[FILE_1].contents = (CONTENT_1)
 
+SYSTEM.files[FILE_2].permissions.owner = USER_2
+SYSTEM.files[FILE_2].permissions.group = none
+SYSTEM.files[FILE_2].permissions.groupPermissions = none
+SYSTEM.files[FILE_2].permissions.otherPermissions = none
+SYSTEM.files[FILE_2].contents = (CONTENT_2)
+}
+
+pred setupDirectories() {
 SYSTEM.directories[DIRECTORY_1].permissions.owner = USER_1
 SYSTEM.directories[DIRECTORY_1].permissions.group = GROUP_1
-
 SYSTEM.directories[DIRECTORY_1].permissions.groupPermissions = (READ + WRITE + EXECUTE)
-
 SYSTEM.directories[DIRECTORY_1].permissions.otherPermissions = none
 SYSTEM.directories[DIRECTORY_1].files = (FILE_1)
 }
+
 
 pred verify() {
 
@@ -218,6 +203,16 @@ readFile[USER_4, FILE_1] = (CONTENT_1)
 readFile[USER_5, FILE_1] = (CONTENT_1) 
 
 readFile[USER_1, FILE_1] != (CONTENT_2)
+
+writeFile[USER_2, FILE_2, CONTENT_2]
+
+readFile[USER_1, FILE_2] = none
+readFile[USER_2, FILE_2] = (CONTENT_2)
+readFile[USER_3, FILE_2] = none
+readFile[USER_4, FILE_2] = none
+readFile[USER_5, FILE_2] = none
+
+readFile[USER_2, FILE_2] != (CONTENT_1)
 
 writeDirectory[USER_1, DIRECTORY_1, FILE_1]
 writeDirectory[USER_2, DIRECTORY_1, FILE_1]
@@ -236,6 +231,12 @@ not executeFile[USER_2, FILE_1]
 not executeFile[USER_3, FILE_1]
 not executeFile[USER_4, FILE_1]
 not executeFile[USER_5, FILE_1]
+
+not executeFile[USER_1, FILE_2]
+executeFile[USER_2, FILE_2]
+not executeFile[USER_3, FILE_2]
+not executeFile[USER_4, FILE_2]
+not executeFile[USER_5, FILE_2]
 
 executeDirectory[USER_1, DIRECTORY_2] = FILE_1
 executeDirectory[USER_2, DIRECTORY_2] = FILE_1
