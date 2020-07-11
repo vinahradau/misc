@@ -1,14 +1,16 @@
+// formal model for role based access control (RBAC)
+// can be verified and visualized using Alloy Tools GUI
+// developed by Serge (vinahradau@yahoo.de)
+
 module RoleBasedAccessConrol
 
 enum METADATA {CUSTOMER_NAME, CUSTOMER_ADDRESS, IS_VIP_CUSTOMER}
 
-enum ENTITY {ENTITY1, ENTITY2, ENTITY3}
+enum CONTENT {MUSTERMANN_1, MUSTERMANN_2, SEESTRASSE_1, SEESTRASSE_2, YES, NO}
 
-enum CONTENT {MUSTERMANN, SEESTRASSE, YES, NO, XXXXX}
+enum USER {USER_1, USER_2, USER_3}
 
-enum USER {USER1, USER2, USER3, USER4, USER5}
-
-enum NODEID {NODE1, NODE2, NODE3}
+enum NODEID {NODE_1, NODE_2}
 
 enum ROLE {ROLE_GUI_USER, ROLE_GUI_USER_FULL_ACCESS}
 
@@ -19,11 +21,8 @@ nodeDataContents: METADATA -> lone CONTENT
 
 sig DOMAIN {
 nodes: NODEID -> lone NODE,
-teams: ENTITY -> USER,
 roles: ROLE -> METADATA,
-userAccessRights: USER -> ROLE,
-cidStoringNodesIds: set NODEID,
-cidBulkAccessLog: USER -> NODEID
+userAccessRights: USER -> ROLE
 }{
 }
 
@@ -42,14 +41,6 @@ role_in: ROLE,
 metadata_in: set METADATA)
 {
 d'.roles = d.roles++ role_in -> metadata_in
-}
-
-pred AddUser
-(d, d':DOMAIN,
-user_in: USER,
-entity_in: ENTITY)
-{
-d'.teams = d.teams ++ entity_in -> user_in
 }
 
 pred AddUserAccessRight
@@ -71,9 +62,9 @@ else
 none
 }
 
-run runAndVerifyDomain for 1 DOMAIN, 2 NODE
+run runAndVerifyRoleBasedAccessDomain for 1 DOMAIN, 2 NODE
 
-pred runAndVerifyDomain() {
+pred runAndVerifyRoleBasedAccessDomain() {
 
 setupNodes
 assertNodes
@@ -88,56 +79,66 @@ assertAccessData
 pred setupNodes() {
 #DOMAIN.nodes = 2
 
-DOMAIN.nodes[NODE1].nodeId = NODE1
-DOMAIN.nodes[NODE2].nodeId = NODE2
+DOMAIN.nodes[NODE_1].nodeId = NODE_1
+DOMAIN.nodes[NODE_2].nodeId = NODE_2
 
-StoreData[DOMAIN, DOMAIN, NODE1, CUSTOMER_NAME, MUSTERMANN]
-StoreData[DOMAIN, DOMAIN, NODE1, CUSTOMER_ADDRESS, SEESTRASSE]
-StoreData[DOMAIN, DOMAIN, NODE1, IS_VIP_CUSTOMER, YES]
+StoreData[DOMAIN, DOMAIN, NODE_1, CUSTOMER_NAME, MUSTERMANN_1]
+StoreData[DOMAIN, DOMAIN, NODE_1, CUSTOMER_ADDRESS, SEESTRASSE_1]
+StoreData[DOMAIN, DOMAIN, NODE_1, IS_VIP_CUSTOMER, YES]
 
-StoreData[DOMAIN, DOMAIN, NODE2, CUSTOMER_NAME, MUSTERMANN]
-StoreData[DOMAIN, DOMAIN, NODE2, CUSTOMER_ADDRESS, SEESTRASSE]
-StoreData[DOMAIN, DOMAIN, NODE2, IS_VIP_CUSTOMER, NO]
+StoreData[DOMAIN, DOMAIN, NODE_2, CUSTOMER_NAME, MUSTERMANN_2]
+StoreData[DOMAIN, DOMAIN, NODE_2, CUSTOMER_ADDRESS, SEESTRASSE_2]
+StoreData[DOMAIN, DOMAIN, NODE_2, IS_VIP_CUSTOMER, NO]
 }
 
 pred assertNodes() {
-DOMAIN.nodes[NODE1].nodeDataContents[CUSTOMER_NAME] = MUSTERMANN
-DOMAIN.nodes[NODE1].nodeDataContents[CUSTOMER_ADDRESS] = SEESTRASSE
-DOMAIN.nodes[NODE1].nodeDataContents[IS_VIP_CUSTOMER] = YES
+DOMAIN.nodes[NODE_1].nodeDataContents[CUSTOMER_NAME] = MUSTERMANN_1
+DOMAIN.nodes[NODE_1].nodeDataContents[CUSTOMER_ADDRESS] = SEESTRASSE_1
+DOMAIN.nodes[NODE_1].nodeDataContents[IS_VIP_CUSTOMER] = YES
 
-DOMAIN.nodes[NODE2].nodeDataContents[CUSTOMER_NAME] = MUSTERMANN
-DOMAIN.nodes[NODE2].nodeDataContents[CUSTOMER_ADDRESS] = SEESTRASSE
-DOMAIN.nodes[NODE2].nodeDataContents[IS_VIP_CUSTOMER] = NO
+DOMAIN.nodes[NODE_2].nodeDataContents[CUSTOMER_NAME] = MUSTERMANN_2
+DOMAIN.nodes[NODE_2].nodeDataContents[CUSTOMER_ADDRESS] = SEESTRASSE_2
+DOMAIN.nodes[NODE_2].nodeDataContents[IS_VIP_CUSTOMER] = NO
 }
 
 pred setupUserAccess() {
-AddUser[DOMAIN, DOMAIN, (USER1 + USER2 + USER5), ENTITY2]
-
 AddRole[DOMAIN, DOMAIN, ROLE_GUI_USER, (CUSTOMER_NAME + IS_VIP_CUSTOMER)]
 AddRole[DOMAIN, DOMAIN, ROLE_GUI_USER_FULL_ACCESS, (CUSTOMER_NAME + CUSTOMER_ADDRESS + IS_VIP_CUSTOMER)]
 
-AddUserAccessRight[DOMAIN, DOMAIN, USER1, (ROLE_GUI_USER_FULL_ACCESS)]
-AddUserAccessRight[DOMAIN, DOMAIN, USER2, (ROLE_GUI_USER)]
+AddUserAccessRight[DOMAIN, DOMAIN, USER_1, (ROLE_GUI_USER_FULL_ACCESS)]
+AddUserAccessRight[DOMAIN, DOMAIN, USER_2, (ROLE_GUI_USER)]
 }
 
 pred assertUserAccess() {
 DOMAIN.roles[ROLE_GUI_USER_FULL_ACCESS] = CUSTOMER_NAME + CUSTOMER_ADDRESS + IS_VIP_CUSTOMER
 DOMAIN.roles[ROLE_GUI_USER] = CUSTOMER_NAME + IS_VIP_CUSTOMER
-DOMAIN.userAccessRights[USER1] = ROLE_GUI_USER_FULL_ACCESS + ROLE_BULK
-DOMAIN.userAccessRights[USER2] = ROLE_GUI_USER + ROLE_BULK
-DOMAIN.userAccessRights[USER3] = none
+DOMAIN.userAccessRights[USER_1] = ROLE_GUI_USER_FULL_ACCESS
+DOMAIN.userAccessRights[USER_2] = ROLE_GUI_USER
+DOMAIN.userAccessRights[USER_3] = none
 }
 
 pred assertAccessData() {
-accessData[DOMAIN, NODE1, USER1, CUSTOMER_NAME] = MUSTERMANN
-accessData[DOMAIN, NODE1, USER1, CUSTOMER_ADDRESS] = SEESTRASSE
-accessData[DOMAIN, NODE1, USER1, IS_VIP_CUSTOMER] = YES
-accessData[DOMAIN, NODE1, USER2, CUSTOMER_NAME] = MUSTERMANN
-accessData[DOMAIN, NODE1, USER2, CUSTOMER_ADDRESS] = none
+accessData[DOMAIN, NODE_1, USER_1, CUSTOMER_NAME] = MUSTERMANN_1
+accessData[DOMAIN, NODE_1, USER_1, CUSTOMER_ADDRESS] = SEESTRASSE_1
+accessData[DOMAIN, NODE_1, USER_1, IS_VIP_CUSTOMER] = YES
 
-accessData[DOMAIN, NODE1, USER2, IS_VIP_CUSTOMER] = YES
+accessData[DOMAIN, NODE_1, USER_2, CUSTOMER_NAME] = MUSTERMANN_1
+accessData[DOMAIN, NODE_1, USER_2, CUSTOMER_ADDRESS] = none // USER_2 has no access rights for this data
+accessData[DOMAIN, NODE_1, USER_2, IS_VIP_CUSTOMER] = YES
 
-accessData[DOMAIN, NODE2, USER3, CUSTOMER_NAME] = none
-accessData[DOMAIN, NODE2, USER3, CUSTOMER_ADDRESS] = none
-accessData[DOMAIN, NODE2, USER3, IS_VIP_CUSTOMER] = none
+accessData[DOMAIN, NODE_2, USER_1, CUSTOMER_NAME] = MUSTERMANN_2
+accessData[DOMAIN, NODE_2, USER_1, CUSTOMER_ADDRESS] = SEESTRASSE_2
+accessData[DOMAIN, NODE_2, USER_1, IS_VIP_CUSTOMER] = NO
+
+accessData[DOMAIN, NODE_2, USER_2, CUSTOMER_NAME] = MUSTERMANN_2
+accessData[DOMAIN, NODE_2, USER_2, CUSTOMER_ADDRESS] = none
+accessData[DOMAIN, NODE_2, USER_2, IS_VIP_CUSTOMER] = NO
+
+accessData[DOMAIN, NODE_1, USER_3, CUSTOMER_NAME] = none // USER_3 has no access rights
+accessData[DOMAIN, NODE_1, USER_3, CUSTOMER_ADDRESS] = none
+accessData[DOMAIN, NODE_1, USER_3, IS_VIP_CUSTOMER] = none
+
+accessData[DOMAIN, NODE_2, USER_3, CUSTOMER_NAME] = none
+accessData[DOMAIN, NODE_2, USER_3, CUSTOMER_ADDRESS] = none
+accessData[DOMAIN, NODE_2, USER_3, IS_VIP_CUSTOMER] = none
 }
